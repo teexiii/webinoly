@@ -1,0 +1,21 @@
+# Storage: Keep data in memory (fastest for single server)
+store:
+  backend: memory
+
+# Logging: Print to Docker logs
+logging:
+  sink: stdio
+  level: info
+
+bots:
+  # 1. ALLOW Let's Encrypt / SSL Verification
+  # Essential for Webinoly to renew HTTPS certificates
+  - name: ssl-verification
+    path_regex: ^/.well-known/.*$
+    action: ALLOW
+
+  # 2. ALLOW Static Assets
+  # Don't challenge requests for icons, images, or robots.txt
+  - name: static-files
+    path_regex: \.(3gp|3gpp|7z|aac|ai|asf|asx|atom|avi|avif|bin|bmp|bz2|cast|cco|crt|css|cur|deb|der|dll|dmg|doc|docx|ear|eot|eps|exe|flv|gif|gz|heic|hqx|htc|ico|img|iso|jad|jar|jardiff|jng|jnlp|jpeg|jpg|js|json|kar|kml|kmz|m3u8|m4a|m4v|mid|midi|mml|mng|mov|mp3|mp4|mpeg|mpg|msi|msm|msp|odg|odp|ods|odt|ogg|ogv|otf|pdb|pdf|pem|pl|pm|png|ppt|pptx|prc|ps|ra|rar|rpm|rss|rtf|run|sea|sit|svg|svgz|swf|tar|taz|tcl|tgz|tif|tiff|tk|ts|ttf|txt|tz|war|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xhtml|xls|xlsx|xpi|xsp|xspf|z|zip)$
+    action: ALLOW
