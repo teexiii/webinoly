@@ -1,0 +1,88 @@
+server {
+	listen 80;
+	listen [::]:80;
+	server_name <domain>;
+
+	location / {
+	  return 301 https://$host$request_uri;
+	}
+}
+
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
+	http2 on;
+
+	server_name <domain>;
+
+	ssl_certificate /etc/letsencrypt/live/<domain>/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/<domain>/privkey.pem;
+
+	access_log /var/log/nginx/<access_log_name>.access.log we_log;
+	error_log /var/log/nginx/<error_log_name>.error.log;
+
+	# --- SECURITY HEADERS (Hardening) ---
+	# HSTS: Force browsers to use HTTPS for the next 2 years
+	add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+	# Prevent Clickjacking
+	add_header X-Frame-Options "SAMEORIGIN" always;
+	# Prevent MIME-sniffing
+	add_header X-Content-Type-Options "nosniff" always;
+	# Enable browser XSS filtering
+	add_header X-XSS-Protection "1; mode=block" always;
+	# Referrer Policy (Privacy)
+	add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+	# --- HIDE SERVER VERSION ---
+	server_tokens off;
+
+	# Block common config file requests
+	location ~ ^/(config|application|appsettings|aws/credentials) { deny all; return 403; }
+
+	# Block profiler paths
+	location ~ ^/_profiler/ { deny all; return 403; }
+
+	# Block version control and deployment files
+	location ~ \.(git|gitignore|gitmodules|gitattributes|hgignore|bzrignore|cvsignore|svnignore|dockerignore|dockerfile|docker-compose|vagrant|ansible|puppet|chef|saltstack|terraform|kubernetes|helm|compose|stack|swarm)$ { deny all; return 444; }
+
+	# Block cloud config files
+	location ~ ^/(\.aws|\.azure|\.gcp|\.do|\.vultr|\.linode|\.hetzner|credentials|config|kubeconfig|kubectl|helm|terraform|\.terraformrc|\.terraform|ansible|hosts|inventory|playbook|vault|secrets)/ { deny all; return 444; }
+
+	# 2. Block sensitive backup and config extensions ANYWHERE (root or subdirs)
+	# Covers: .sql, .env, .bak, .log, .old, .swp, .ini, .sh, .yaml, .yml
+	location ~* \.(sql|env|bak|log|old|swp|ini|sh|yaml|yml|conf|config|dist|inc)$ {
+		deny all;
+		access_log off;
+		log_not_found off;
+		return 444;
+	}
+
+	# 3. Block specific PHP scripts often used for probing (anywhere)
+	location ~* /(phpinfo|info|test|p|i|x|shell|cmd)\.php$ {
+		deny all;
+		return 403;
+	}
+
+	# 4. Block common sensitive folders/paths often left by frameworks/CMS
+	location ~* ^/(application|system|vendor|aws|cgi-bin|uploads/.*\.php) {
+		deny all;
+		return 403;
+	}
+
+	# Anubis Bot Protection
+	location / {
+		# CRITICAL: Pass Real IP to Anubis
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+
+		# Websocket Support (if your app needs it)
+		proxy_http_version 1.1;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection "upgrade";
+		proxy_set_header X-Http-Version $server_protocol;
+
+		proxy_pass http://<anubis_upstream>;
+	}
+}

@@ -1,0 +1,29 @@
+services:
+  anubis:
+    image: docker.io/digitop/anubis:v1-22-1
+    container_name: anubis_<container_name>
+    network_mode: host
+    environment:
+      BIND: ":<anubis_port>"
+      # Now we can point directly to localhost
+      TARGET: "http://<target_ip>:<target_port>"
+      DIFFICULTY: "4"
+      METRICS_BIND: ":<metrics_port>"
+      SERVE_ROBOTS_TXT: "true"
+      POLICY_FNAME: "/data/cfg/botPolicy.yaml"
+      OG_PASSTHROUGH: "true"
+      OG_EXPIRY_TIME: "24h"
+      FORCED_LANGUAGE: "vi"
+      # IMPORTANT: Set a random secret key so users don't get logged out on restart
+      SECRET_KEY: "<secret_key>"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://<target_ip>:<anubis_port>/health"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 500ms
+    # 'ports' section is REMOVED because we are using network_mode: host
+    volumes:
+      - "./botPolicy.yaml:/data/cfg/botPolicy.yaml:ro"
+    restart: always

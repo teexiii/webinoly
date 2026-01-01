@@ -2344,3 +2344,113 @@ _EOF_
 	echo "${gre}WordPress Environment Type has been set successfully! ${dim}(${env})${end}"
 }
 
+
+anubis_setup() {
+	# Parse Anubis parameter: -anubis=[IP:PORT]
+	local anubis_data=""
+	if [[ $anubis != true ]]; then
+		local firstchar=$(echo "${anubis}" | cut -c-1)
+		local lastchar=$(echo "${anubis}" | rev | cut -c-1)
+
+		if [[ ${#anubis} -lt 2 ]]; then
+			echo "${red}[ERROR] Invalid data for Anubis!${end}"
+			exit 1
+		fi
+
+		anubis_data=${anubis:1:-1}
+		[[ $firstchar != "[" || $lastchar != "]" ]] && anubis_data=""
+	else
+		read -p "${blu}Anubis Target IP:PORT (e.g., 127.0.0.1:8080): ${end}" anubis_data
+	fi
+
+	if [[ -z $anubis_data ]]; then
+		echo "${red}[ERROR] Anubis target IP:PORT is required!${end}"
+		exit 1
+	fi
+
+	# Parse IP and PORT
+	local target_ip=$(echo "${anubis_data}" | cut -d':' -f 1)
+	local target_port=$(echo "${anubis_data}" | cut -d':' -f 2)
+
+	if [[ -z $target_ip || -z $target_port ]]; then
+		echo "${red}[ERROR] Invalid Anubis format! Use IP:PORT (e.g., 127.0.0.1:8080)${end}"
+		exit 1
+	fi
+
+	# Calculate Anubis port (target_port + 10000)
+	local anubis_port=$((target_port + 10000))
+	local metrics_port=$((anubis_port - 10000))
+
+	# Validate that Anubis will be accessible
+	if [[ $anubis_port -lt 1024 || $anubis_port -gt 65535 ]]; then
+		echo "${red}[ERROR] Calculated Anubis port ($anubis_port) is out of valid range!${end}"
+		exit 1
+	fi
+
+	# Create Anubis directory
+	local anubis_dir="/opt/anubis/$(echo $domain | sed 's/\./_/g')"
+	echo "${blu}Creating Anubis directory: ${anubis_dir}${end}"
+	sudo mkdir -p "$anubis_dir"
+
+	# Generate random secret key for docker-compose
+	local secret_key=$(cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 64 | head -n 1)
+
+	# Container name (replace dots with underscores)
+	local container_name=$(echo $domain | sed 's/\./_/g')
+
+	# Copy and configure docker-compose template
+	echo "${blu}Creating docker-compose.yml...${end}"
+	sudo cp /opt/webinoly/templates/template-anubis-compose "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<container_name>/${container_name}/g" "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<target_ip>/${target_ip}/g" "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<target_port>/${target_port}/g" "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<anubis_port>/${anubis_port}/g" "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<metrics_port>/${metrics_port}/g" "$anubis_dir/docker-compose.yml"
+	sudo sed -i "s/<secret_key>/${secret_key}/g" "$anubis_dir/docker-compose.yml"
+
+	# Copy botPolicy.yaml template
+	echo "${blu}Creating botPolicy.yaml...${end}"
+	sudo cp /opt/webinoly/templates/template-anubis-botpolicy "$anubis_dir/botPolicy.yaml"
+
+	# Set proper permissions
+	sudo chmod 644 "$anubis_dir/docker-compose.yml"
+	sudo chmod 644 "$anubis_dir/botPolicy.yaml"
+	sudo chown -R root:root "$anubis_dir"
+
+	# Export variables for nginx configuration
+	anubis_upstream=$(echo "$domain" | sed "s/[^0-9A-Za-z]/_/g")_anubis
+	anubis_bind_ip="127.0.0.1"
+	anubis_bind_port=$anubis_port
+
+	# Create upstream for Anubis
+	if [[ ! -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
+		sudo touch /etc/nginx/conf.d/upstream_proxy.conf
+		sudo chmod 644 /etc/nginx/conf.d/upstream_proxy.conf
+		sudo chown -R root:root /etc/nginx/conf.d/upstream_proxy.conf
+	fi
+
+	echo "upstream ${anubis_upstream} {
+	zone upstreams;
+	server ${anubis_bind_ip}:${anubis_bind_port};
+	keepalive 2;
+} #End" | sudo tee -a /etc/nginx/conf.d/upstream_proxy.conf > /dev/null
+
+	echo ""
+	echo "${gre}========================================${end}"
+	echo "${gre}Anubis Bot Protection Setup Complete!${end}"
+	echo "${gre}========================================${end}"
+	echo ""
+	echo "${blu}Directory:${end} ${anubis_dir}"
+	echo "${blu}Target:${end} ${target_ip}:${target_port}"
+	echo "${blu}Anubis Port:${end} ${anubis_port}"
+	echo "${blu}Upstream:${end} ${anubis_upstream}"
+	echo ""
+	echo "${ylw}Next steps:${end}"
+	echo "1. Review and edit: ${anubis_dir}/docker-compose.yml"
+	echo "2. Review and edit: ${anubis_dir}/botPolicy.yaml"
+	echo "3. Start Anubis: cd ${anubis_dir} && docker-compose up -d"
+	echo "4. Check logs: docker logs -f anubis_${container_name}"
+	echo "5. Monitor metrics: http://${anubis_bind_ip}:${metrics_port}/metrics"
+	echo ""
+}
+

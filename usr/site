@@ -2,8 +2,8 @@
 
 # Site Manager Plugin (Create, delete and de/activate)
 # Syntax: site <domain> <option> <argument>
-# Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env
-# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -external-db, -revoke, -ssl-crt, -ssl-key, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -dedicated-reverse-proxy, -cache-valid, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -query-string-cache-default, -reset, -test-cert, -db-role, -domain-mapping-wp-id, -delete-all
+# Options: -html, -php, -mysql, -wp, -parked, -proxy, -empty, -on, -off, -delete, -delete-all, -list, -cache, -ssl, -force-redirect, -multisite-convert, -clone-from, -replace-content, -redirection, -forward, -info, -env, -anubis
+# Arguments: -cache, -root, -root-path, -subdomain, -ignore-ssl, -wildcard, -external-db, -revoke, -ssl-crt, -ssl-key, -subfolder, -from, -to, -http-code, -regex, -manual, -overwrite, -wp-cache-plugins, -dedicated-reverse-proxy, -cache-valid, -skip-cache, -skip-cookie-cache, -query-string-cache, -query-string-never-cache, -query-string-cache-default, -reset, -test-cert, -db-role, -domain-mapping-wp-id, -delete-all, -anubis
 
 # shopt is necessary for this kind !(html|<toolsport>) of patterns
 shopt -s extglob
@@ -248,9 +248,44 @@ elif [[ -n $parked && -n $domain ]]; then
 
 	
 # Reverse proxy
-elif [[ -n $proxy && -n $domain ]]; then	
+elif [[ -n $proxy && -n $domain ]]; then
 	reverse_proxy
-	
+
+
+# Anubis Bot Protection
+elif [[ -n $anubis && -n $domain ]]; then
+	full_empty_not_allowed
+
+	# Call anubis_setup to create docker-compose and config files
+	anubis_setup
+
+	# Now set up nginx with Anubis template if site doesn't exist
+	if [[ ! -f /etc/nginx/sites-available/$domain ]]; then
+		echo "${blu}Creating Nginx configuration for Anubis...${end}"
+
+		# Use the Anubis template
+		sudo cp /opt/webinoly/templates/template-site-anubis /etc/nginx/sites-available/$domain
+
+		# Replace placeholders
+		local access_log_name=$(echo $domain | sed 's/\./_/g')
+		local error_log_name=$(echo $domain | sed 's/\./_/g')
+		local anubis_upstream_name=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_anubis
+
+		sudo sed -i "s/<domain>/${domain}/g" /etc/nginx/sites-available/$domain
+		sudo sed -i "s/<access_log_name>/${access_log_name}/g" /etc/nginx/sites-available/$domain
+		sudo sed -i "s/<error_log_name>/${error_log_name}/g" /etc/nginx/sites-available/$domain
+		sudo sed -i "s/<anubis_upstream>/${anubis_upstream_name}/g" /etc/nginx/sites-available/$domain
+
+		# Create symbolic link to enable site
+		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
+
+		echo "${gre}Nginx site configuration created successfully!${end}"
+		echo "${blu}Configuration file:${end} /etc/nginx/sites-available/$domain"
+	else
+		echo "${ylw}[WARNING] Nginx site configuration already exists. Anubis setup completed but nginx config was not modified.${end}"
+		echo "${dim}You may need to manually update /etc/nginx/sites-available/$domain to use Anubis.${end}"
+	fi
+
 
 # Forward domain
 elif [[ -n $forward && -n $domain ]]; then

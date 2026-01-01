@@ -1669,7 +1669,7 @@ check_var() {
 	# Browser Cache: Static Files (Extensions)
 	elif [[ $1 == "browser-cache-extensions" ]]; then
 		if [[ -z $(conf_read browser-cache-extensions) ]]; then
-			local out="3gp|3gpp|3g2|3gpp2|aac|asf|asx|atom|avi|avif|bmp|cast|css|cur|doc|docx|eot|flv|gif|heic|htc|ico|jng|jpeg|jpg|js|json|m4a|m4v|mid|midi|mng|mov|mp3|mp4|mpeg|mpg|odg|ogg|ogv|otf|pdf|png|ppt|pptx|ra|rss|rtf|svg|svgz|swf|tif|tiff|ts|ttc|ttf|txt|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xls|xlsx|xpi"
+			local out="3gp|3gpp|3g2|3gpp2|aac|asf|asx|atom|avi|avif|bmp|cast|css|cur|doc|docx|eot|flv|gif|heic|htc|ico|jng|jpeg|jpg|js|json|m4a|m4v|mid|midi|mng|mov|mp3|mp4|mpeg|mpg|odg|ogg|ogv|otf|pdf|png|ppt|pptx|ra|rss|rtf|svg|svgz|swf|tif|tiff|ts|ttc|ttf|txt|wasm|wav|wbmp|webm|webmanifest|webp|wml|wmlc|wmv|woff|woff2|xls|xlsx|xpi|glb|fbx"
 		else
 			local out=$(conf_read browser-cache-extensions)
 		fi
