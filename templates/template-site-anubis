@@ -83,6 +83,6 @@ server {
 		proxy_set_header Connection "upgrade";
 		proxy_set_header X-Http-Version $server_protocol;
 
-		proxy_pass http://<anubis_upstream>;
+		proxy_pass <upstream_name>;
 	}
 }
