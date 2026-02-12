@@ -4,30 +4,35 @@
 # Prevent 'tput' errors when running from Cron
 [[ -z $TERM || $TERM == "unknown" || $TERM == "dumb" ]] && export TERM=dumb
 
-readonly app_version="1.19.7"
-readonly svr_version="1.11"
-readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
-readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4 8.5) # https://www.php.net/supported-versions.php
-readonly php_default="8.4"
-readonly mariadb_supported=(10.11 11.4 11.8) # https://mariadb.com/docs/release-notes/community-server
-readonly mariadb_default="11.8"
-readonly mysql_supported=(8.0 8.4) # https://endoflife.date/mysql
-readonly mysql_default="8.4"
-readonly tools_port_default="22222"
+# Prevent multiple sourcing errors
+if [[ -z "${app_version}" ]]; then
+	readonly app_version="1.19.7"
+	readonly svr_version="1.11"
+	readonly os_ubuntu_supported=(focal jammy noble) # https://ubuntu.com/about/release-cycle
+	readonly php_supported=(7.4 8.0 8.1 8.2 8.3 8.4 8.5) # https://www.php.net/supported-versions.php
+	readonly php_default="8.4"
+	readonly mariadb_supported=(10.11 11.4 11.8) # https://mariadb.com/docs/release-notes/community-server
+	readonly mariadb_default="11.8"
+	readonly mysql_supported=(8.0 8.4) # https://endoflife.date/mysql
+	readonly mysql_default="8.4"
+	readonly tools_port_default="22222"
 
-# Additional Tools
-readonly datadog_agent_ver="7"
-readonly duplicity_version="2.1.4"
+	# Additional Tools
+	readonly datadog_agent_ver="7"
+	readonly duplicity_version="2.1.4"
+fi
 
 # echo colors
-readonly red=$(tput setaf 1)
-readonly gre=$(tput setaf 2)
-readonly blu=$(tput setaf 6)
-readonly end=$(tput sgr0)
-readonly bol=$(tput bold)
-readonly dim=$(tput dim)
-readonly hid=$(tput setaf 6)$(tput setab 6)
-readonly hidend=$(tput sgr0)$(tput el)
+if [[ -z "${red}" ]]; then
+	readonly red=$(tput setaf 1)
+	readonly gre=$(tput setaf 2)
+	readonly blu=$(tput setaf 6)
+	readonly end=$(tput sgr0)
+	readonly bol=$(tput bold)
+	readonly dim=$(tput dim)
+	readonly hid=$(tput setaf 6)$(tput setab 6)
+	readonly hidend=$(tput sgr0)$(tput el)
+fi
 
 
 # ***********************************************
@@ -98,40 +103,46 @@ if [[ $(conf_read shell-check) != "false" && -n $(echo $(tty) | grep -Eo "pts/[0
 fi
 
 # MySQL folder
-if [[ $(conf_read db-engine) == "mysql" ]]; then
-	readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d"
-	readonly MYSQL_CONF_PREF="xx"
-	readonly MYSQL_COMMAND="mysql"
-	readonly MYSQL_DUMP_COMMAND="mysqldump"
-	readonly MYSQL_SHOW_COMMAND="mysqlshow"
-	readonly MYSQL_UPGRADE_COMMAND="mysql_upgrade"
-else
-	readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
-	readonly MYSQL_CONF_PREF="90"
-	readonly MYSQL_COMMAND="mariadb"
-	readonly MYSQL_DUMP_COMMAND="mariadb-dump"
-	readonly MYSQL_SHOW_COMMAND="mariadb-show"
-	readonly MYSQL_UPGRADE_COMMAND="mariadb-upgrade"
+if [[ -z "${MYSQL_CONF_PATH}" ]]; then
+	if [[ $(conf_read db-engine) == "mysql" ]]; then
+		readonly MYSQL_CONF_PATH="/etc/mysql/mysql.conf.d"
+		readonly MYSQL_CONF_PREF="xx"
+		readonly MYSQL_COMMAND="mysql"
+		readonly MYSQL_DUMP_COMMAND="mysqldump"
+		readonly MYSQL_SHOW_COMMAND="mysqlshow"
+		readonly MYSQL_UPGRADE_COMMAND="mysql_upgrade"
+	else
+		readonly MYSQL_CONF_PATH="/etc/mysql/mariadb.conf.d"
+		readonly MYSQL_CONF_PREF="90"
+		readonly MYSQL_COMMAND="mariadb"
+		readonly MYSQL_DUMP_COMMAND="mariadb-dump"
+		readonly MYSQL_SHOW_COMMAND="mariadb-show"
+		readonly MYSQL_UPGRADE_COMMAND="mariadb-upgrade"
+	fi
 fi
 
 # Current LoggedIn User!
-if [[ -n $(logname) && -d $(eval echo ~$(logname)) ]]; then # You better double check...
-	readonly CURRENT_HOME=$(eval echo ~$(logname))
-	readonly CURRENT_USER=$(logname)
-else
-	readonly CURRENT_HOME="/root"
-	readonly CURRENT_USER="root"
+if [[ -z "${CURRENT_USER}" ]]; then
+	if [[ -n $(logname) && -d $(eval echo ~$(logname)) ]]; then # You better double check...
+		readonly CURRENT_HOME=$(eval echo ~$(logname))
+		readonly CURRENT_USER=$(logname)
+	else
+		readonly CURRENT_HOME="/root"
+		readonly CURRENT_USER="root"
+	fi
 fi
 
 # Admin Tools Path
-if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && -f /etc/nginx/sites-available/$(conf_read tools-site) ]]; then
-	readonly ADMIN_TOOLS_SITE="$(conf_read tools-site):$(conf_read tools-port)"
-else
-	if [[ -n $(conf_read tools-port) ]]; then
-		readonly ADMIN_TOOLS_SITE="default:$(conf_read tools-port)"
+if [[ -z "${ADMIN_TOOLS_SITE}" ]]; then
+	if [[ -n $(conf_read tools-port) && -n $(conf_read tools-site) && -f /etc/nginx/sites-available/$(conf_read tools-site) ]]; then
+		readonly ADMIN_TOOLS_SITE="$(conf_read tools-site):$(conf_read tools-port)"
 	else
-		# Fresh installation, dynvar is empty!
-		readonly ADMIN_TOOLS_SITE="default:${tools_port_default}"
+		if [[ -n $(conf_read tools-port) ]]; then
+			readonly ADMIN_TOOLS_SITE="default:$(conf_read tools-port)"
+		else
+			# Fresh installation, dynvar is empty!
+			readonly ADMIN_TOOLS_SITE="default:${tools_port_default}"
+		fi
 	fi
 fi
 

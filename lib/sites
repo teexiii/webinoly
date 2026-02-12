@@ -1486,7 +1486,7 @@ reverse_proxy() {
 	# We recommend setting the 'keepalive' parameter to twice the number of servers listed in the upstream block.
 	# The proxy_http_version directive should be set to “1.1” and the “Connection” header field should be cleared.
 	# Note also that when you specify a load-balancing algorithm in the upstream block – with the hash, ip_hash, least_conn, least_time, or random directive – the directive must appear above the keepalive directive.
-	keepalive 2;
+	# keepalive 2;
 } #End" >> /etc/nginx/conf.d/upstream_proxy.conf
 	fi
 	
@@ -2420,7 +2420,7 @@ anubis_setup() {
 	# Export variables for nginx configuration
 	anubis_upstream=$(echo "$domain" | sed "s/[^0-9A-Za-z]/_/g")_anubis
 	anubis_bind_ip="127.0.0.1"
-	anubis_bind_port=$anubis_port
+	anubis_bind_port=$target_port
 
 	# Create upstream for Anubis
 	if [[ ! -f /etc/nginx/conf.d/upstream_proxy.conf ]]; then
@@ -2432,7 +2432,7 @@ anubis_setup() {
 	echo "upstream ${anubis_upstream} {
 	zone upstreams;
 	server ${anubis_bind_ip}:${anubis_bind_port};
-	keepalive 2;
+	# keepalive 2;
 } #End" | sudo tee -a /etc/nginx/conf.d/upstream_proxy.conf > /dev/null
 
 	echo ""

@@ -266,15 +266,14 @@ elif [[ -n $anubis && -n $domain ]]; then
 		# Use the Anubis template
 		sudo cp /opt/webinoly/templates/template-site-anubis /etc/nginx/sites-available/$domain
 
-		# Replace placeholders
-		local access_log_name=$(echo $domain | sed 's/\./_/g')
-		local error_log_name=$(echo $domain | sed 's/\./_/g')
-		local anubis_upstream_name=$(echo $domain | sed "s/[^0-9A-Za-z]/_/g")_anubis
+		# Replace placeholders (anubis_upstream is set by anubis_setup function)
+		access_log_name=$(echo $domain | sed 's/\./_/g')
+		error_log_name=$(echo $domain | sed 's/\./_/g')
 
 		sudo sed -i "s/<domain>/${domain}/g" /etc/nginx/sites-available/$domain
 		sudo sed -i "s/<access_log_name>/${access_log_name}/g" /etc/nginx/sites-available/$domain
 		sudo sed -i "s/<error_log_name>/${error_log_name}/g" /etc/nginx/sites-available/$domain
-		sudo sed -i "s/<anubis_upstream>/${anubis_upstream_name}/g" /etc/nginx/sites-available/$domain
+		sudo sed -i "s|<upstream_name>|http://${anubis_upstream}|g" /etc/nginx/sites-available/$domain
 
 		# Create symbolic link to enable site
 		sudo ln -s /etc/nginx/sites-available/$domain /etc/nginx/sites-enabled/$domain
