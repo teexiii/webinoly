@@ -46,8 +46,7 @@ server {
 
 	# Anubis Bot Protection
 	location / {
-		limit_req zone=web burst=100 nodelay;
-		limit_conn conn 20;
+		limit_req zone=web burst=400 nodelay;
 		limit_req_status 429;
 
 		# CRITICAL: Pass Real IP to Anubis
